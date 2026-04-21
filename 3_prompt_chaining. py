@@ -1,0 +1,34 @@
+
+
+from langgraph.graph import StateGraph, START, END
+from typing import TypedDict
+from langchain_groq import ChatGroq
+from dotenv import load_dotenv
+
+load_dotenv()
+model = ChatGroq(model="llama3-8b-8192")
+
+class State(TypedDict):
+    title: str
+    outline: str
+    blog: str
+
+def outline(s: State):
+    s["outline"] = model.invoke(f"Create outline: {s['title']}").content
+    return s
+
+def blog(s: State):
+    s["blog"] = model.invoke(f"{s['title']}\n{s['outline']}").content
+    return s
+
+g = StateGraph(State)
+g.add_node("outline", outline)
+g.add_node("blog", blog)
+
+g.add_edge(START, "outline")
+g.add_edge("outline", "blog")
+g.add_edge("blog", END)
+
+app = g.compile()
+
+print(app.invoke({"title": "AI in India"}))
